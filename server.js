@@ -1,14 +1,28 @@
+const http = require('http');
 const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: 3001 });
+
+// Create HTTP server with CORS headers
+const server = http.createServer((req, res) => {
+    res.writeHead(200, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+    });
+    res.end('WebSocket server is running');
+});
+
+// Attach WebSocket server to this HTTP server
+const wss = new WebSocket.Server({ server });
 
 const games = {};
 
 wss.on('connection', (ws) => {
     console.log('New client connected');
+    
     ws.on('message', (message) => {
         const data = JSON.parse(message);
         console.log('Received message:', data);
-        
+
         if (data.type === 'join') {
             const gameId = data.gameId;
 
@@ -17,9 +31,9 @@ wss.on('connection', (ws) => {
             }
 
             games[gameId].push(ws);
-            console.log(`Client joined game: ${gameId}, Total: ${games[gameId].length}`);
-
             ws.gameId = gameId;
+
+            console.log(`Client joined game: ${gameId}, Total: ${games[gameId].length}`);
 
             if (games[gameId].length === 2) {
                 games[gameId][0].send(JSON.stringify({ type: 'start', symbol: 'X' }));
@@ -56,4 +70,7 @@ wss.on('connection', (ws) => {
     });
 });
 
-// console.log("WebSocket server running on ws://localhost:3001");
+// Start the HTTP server (and WebSocket)
+server.listen(3001, () => {
+    console.log('WebSocket server running on ws://localhost:3001');
+});
